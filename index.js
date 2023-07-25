@@ -53,6 +53,15 @@ const verifyJWT = (req, res, next) => {
 // database connection:
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wndd9z6.mongodb.net/?retryWrites=true&w=majority`;
 
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version:
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
 // database functionalities:
 async function run() {
   try {
@@ -60,8 +69,10 @@ async function run() {
     await client.connect();
 
     // database collections:
-    const usersCollection = client.db('gocampus').collection('users');
-    const classCollection = client.db('gocampus').collection('colleges');
+    const userCollection = client.db('gocampus').collection('users');
+    const collegeCollection = client.db('gocampus').collection('colleges');
+    const admissionCollection = client.db('gocampus').collection('admissions');
+    const reviewCollection = client.db('gocampus').collection('myReview');
 
     // JWT configuration:
     app.post('/jwt', async (req, res) => {
@@ -109,11 +120,11 @@ async function run() {
     app.delete('/users/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await usersCollection.deleteOne(query);
+      const result = await userCollection.deleteOne(query);
       res.send(result);
     });
 
-    // Admin APIs:
+    // Admin APIs:--------------->>>
     app.get('/users/admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
 
@@ -122,7 +133,7 @@ async function run() {
       }
 
       const query = { email: email };
-      const user = await usersCollection.findOne(query);
+      const user = await userCollection.findOne(query);
       const result = { admin: user?.role === 'admin' };
       res.send(result);
     });
@@ -137,21 +148,21 @@ async function run() {
           role: 'admin',
         },
       };
-      const result = await usersCollection.updateOne(filter, updatedDoc);
+      const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
       console.log(result);
     });
 
     // class collection:
     app.get('/colleges', async (req, res) => {
-      const result = await classCollection.find().toArray();
+      const result = await collegeCollection.find().toArray();
       res.send(result);
     });
 
     // add new class:
     app.post('/colleges', async (req, res) => {
       const newClass = req.body;
-      const result = await classCollection.insertOne(newClass);
+      const result = await collegeCollection.insertOne(newClass);
       res.send(result);
     });
 
@@ -159,7 +170,41 @@ async function run() {
     app.delete('/colleges/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await classCollection.deleteOne(query);
+      const result = await collegeCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Admission related APIs:--------------->>>
+    // admission collection:
+    app.get('/admission', async (req, res) => {
+      const result = await admissionCollection.find().toArray();
+      res.send(result);
+    });
+
+    // add new admission:
+    app.post('/admission', async (req, res) => {
+      const newAdmission = req.body;
+      const result = await admissionCollection.insertOne(newAdmission);
+      res.send(result);
+    });
+
+    // delete a admission::
+    app.delete('/admission/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await admissionCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Review APIs:----------------->>>
+    app.get('/review', async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post('/review', async (req, res) => {
+      const myReview = req.body;
+      const result = await reviewCollection.insertOne(myReview);
       res.send(result);
     });
 
